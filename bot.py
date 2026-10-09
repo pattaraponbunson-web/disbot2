@@ -13,7 +13,8 @@ from openai import OpenAI
 
 
 BASE_URL = "https://integrate.api.nvidia.com/v1"
-DEFAULT_MODEL = "deepseek-ai/deepseek-v4.1-flash"
+DEFAULT_MODEL = "nvidia/nemotron-3.5-lightning-30b-a3b"
+NVIDIA_TIMEOUT_SECONDS = float(os.getenv("NVIDIA_TIMEOUT_SECONDS", "120"))
 HISTORY_LIMIT = 10
 DISCORD_MESSAGE_LIMIT = 1900
 SYSTEM_PROMPT = (
@@ -122,8 +123,8 @@ if not NVIDIA_API_KEY:
 client = OpenAI(
     base_url=BASE_URL,
     api_key=NVIDIA_API_KEY,
-    timeout=60.0,
-    max_retries=2,
+    timeout=NVIDIA_TIMEOUT_SECONDS,
+    max_retries=0,
 )
 
 intents = discord.Intents.default()
@@ -142,7 +143,8 @@ async def generate_response(channel_id, prompt):
         model=MODEL,
         messages=api_messages,
         temperature=0.7,
-        max_tokens=2048,
+        max_tokens=1024,
+        extra_body={"chat_template_kwargs": {"enable_thinking": False}},
     )
 
     completion = await bot.loop.run_in_executor(None, request)

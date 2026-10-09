@@ -13,7 +13,7 @@ from openai import OpenAI
 
 
 BASE_URL = "https://integrate.api.nvidia.com/v1"
-DEFAULT_MODEL = "meta/llama-3.3-70b-instruct"
+DEFAULT_MODEL = "deepseek-ai/deepseek-v4.1-flash"
 HISTORY_LIMIT = 10
 DISCORD_MESSAGE_LIMIT = 1900
 SYSTEM_PROMPT = (

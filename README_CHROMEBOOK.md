@@ -49,4 +49,4 @@ The bot creates `chat_history.db` beside `bot.py` by default. The database lives
 - Use `/ask` with a prompt to chat through a Discord slash command. After deploying an update, restart the bot so it can sync the command with Discord; global command changes may take a little while to appear.
 - Mention the bot in a server channel, or message it directly, to chat. If `ALLOWED_CHANNEL_ID` is configured, it only responds in that channel.
 - Run `!reset` in a channel to clear that channel's saved history.
-- The bot stores the latest conversation messages in SQLite and sends long responses in Discord-safe chunks.
+- The bot replies in Thai by default, stores the latest conversation messages in SQLite, and splits long responses into Discord-safe chunks without dropping spaces or Unicode characters.

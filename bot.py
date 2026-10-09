@@ -17,9 +17,14 @@ DEFAULT_MODEL = "nvidia/nemotron-3.5-lightning-30b-a3b"
 NVIDIA_TIMEOUT_SECONDS = float(os.getenv("NVIDIA_TIMEOUT_SECONDS", "120"))
 HISTORY_LIMIT = 10
 DISCORD_MESSAGE_LIMIT = 1900
+MAX_COMPLETION_TOKENS = 4096
 SYSTEM_PROMPT = (
     "You are a warm, lively, socially aware assistant chatting in Discord. "
-    "Reply in the user's language and naturally match their level of formality. "
+    "Reply in natural Thai by default, even when the user includes English text. "
+    "Use another language only if the user explicitly asks for it. Keep code, "
+    "identifiers, and technical names in their standard form. Do not switch "
+    "into Chinese or another language accidentally, or append unrelated foreign "
+    "characters. Naturally match the user's level of formality. "
     "Pay attention to context, tone, and emotion, not just the literal words. "
     "When the user jokes or starts playful banter, play along with a quick, "
     "clever response instead of explaining the joke. Use humor naturally; "
@@ -95,26 +100,34 @@ def clear_history_from_db(channel_id):
         connection.execute("DELETE FROM messages WHERE channel_id = ?", (channel_id,))
 
 
+def discord_safe_prefix_length(text, limit):
+    """Return the largest prefix that fits Discord's UTF-16 character limit."""
+    units = 0
+    for index, character in enumerate(text):
+        character_units = 2 if ord(character) > 0xFFFF else 1
+        if units + character_units > limit:
+            return index
+        units += character_units
+    return len(text)
+
+
 def chunk_message(text, limit=DISCORD_MESSAGE_LIMIT):
     """Split text into Discord-safe pieces, preferring paragraph or word breaks."""
     remaining = text.strip()
     chunks = []
-    while len(remaining) > limit:
-        split_at = remaining.rfind("\n", 0, limit + 1)
-        if split_at < limit // 2:
-            split_at = remaining.rfind(" ", 0, limit + 1)
-        if split_at < limit // 2:
-            split_at = limit
+    while remaining:
+        max_chars = discord_safe_prefix_length(remaining, limit)
+        if max_chars == len(remaining):
+            chunks.append(remaining)
+            break
 
-        chunk = remaining[:split_at].rstrip()
-        if not chunk:
-            chunk = remaining[:limit]
-            split_at = limit
-        chunks.append(chunk)
-        remaining = remaining[split_at:].lstrip()
+        break_at = remaining.rfind("\n", 0, max_chars)
+        if break_at < max_chars // 2:
+            break_at = remaining.rfind(" ", 0, max_chars)
+        split_at = break_at + 1 if break_at >= max_chars // 2 else max_chars
 
-    if remaining:
-        chunks.append(remaining)
+        chunks.append(remaining[:split_at])
+        remaining = remaining[split_at:]
     return chunks
 
 
@@ -159,7 +172,7 @@ async def generate_response(channel_id, prompt):
         model=MODEL,
         messages=api_messages,
         temperature=0.7,
-        max_tokens=1024,
+        max_tokens=MAX_COMPLETION_TOKENS,
         extra_body={"chat_template_kwargs": {"enable_thinking": False}},
     )
 

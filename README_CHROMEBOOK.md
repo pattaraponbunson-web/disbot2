@@ -6,7 +6,7 @@ This project can be created, configured, and deployed entirely in a browser. You
 
 1. Sign in to GitHub and create a new repository. A private repository is a good choice for a bot project.
 2. Open the repository and press `.` (period) to launch GitHub's browser-based editor. If that shortcut is unavailable, choose **Code** and open the repository in a Codespace.
-3. Create these files in the repository root: `bot.py`, `requirements.txt`, `.gitignore`, `.env.example`, and `README_CHROMEBOOK.md`.
+3. Create these files in the repository root: `main.py`, `requirements.txt`, `.gitignore`, `.env.example`, and `README_CHROMEBOOK.md`.
 4. Paste in the complete contents for each file and commit the changes to the repository.
 5. Do not put real credentials in `.env.example`, source files, or GitHub commits. The `.gitignore` excludes `.env` and SQLite database files, but hosting secrets should be entered in the host's settings instead.
 
@@ -34,7 +34,7 @@ The steps below use a GitHub-connected Python worker such as Koyeb. Hosting dash
 3. Configure the service as a **Worker/Background Worker**, not as a web site that expects HTTP requests. Use this start command:
 
    ```text
-   python bot.py
+   python main.py
    ```
 
    The host should install dependencies from `requirements.txt` during deployment. If it asks for an install/build command, use `pip install -r requirements.txt`.
@@ -47,11 +47,11 @@ The steps below use a GitHub-connected Python worker such as Koyeb. Hosting dash
 
 ### SQLite storage note
 
-The bot creates `chat_history.db` beside `bot.py` by default. Some hosts use temporary filesystems, so this database may be lost when a service is replaced or redeployed. If conversation history must survive deployments, attach a persistent disk/volume and set `CHAT_HISTORY_DB` to a writable file path on that mounted volume. Confirm that the selected host and plan support persistent storage; do not commit the database to GitHub.
+The bot creates `chat_history.db` beside `main.py` by default. Some hosts use temporary filesystems, so this database may be lost when a service is replaced or redeployed. If conversation history must survive deployments, attach a persistent disk/volume and set `CHAT_HISTORY_DB` to a writable file path on that mounted volume. Confirm that the selected host and plan support persistent storage; do not commit the database to GitHub.
 
 ### Other bot hosting panels
 
-If you use a browser-based bot host such as Bot-Hosting.net instead, look for a Python service that can deploy from GitHub (or upload the repository files through its web panel), install `requirements.txt`, set the same environment variables, and run `python bot.py`. Verify that its current plan permits a continuously running Discord bot and provides persistent storage if you need history retained. A host's advertised free tier, uptime, and storage can change; check its current terms before relying on it for 24/7 operation.
+If you use a browser-based bot host such as Bot-Hosting.net instead, look for a Python service that can deploy from GitHub (or upload the repository files through its web panel), install `requirements.txt`, set the same environment variables, and run `python main.py`. Verify that its current plan permits a continuously running Discord bot and provides persistent storage if you need history retained. A host's advertised free tier, uptime, and storage can change; check its current terms before relying on it for 24/7 operation.
 
 ## Commands and behavior
 

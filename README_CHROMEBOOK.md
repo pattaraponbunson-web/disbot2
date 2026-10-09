@@ -6,7 +6,7 @@ This project can be created, configured, and deployed entirely in a browser. You
 
 1. Sign in to GitHub and create a new repository. A private repository is a good choice for a bot project.
 2. Open the repository and press `.` (period) to launch GitHub's browser-based editor. If that shortcut is unavailable, choose **Code** and open the repository in a Codespace.
-3. Create these files in the repository root: `main.py`, `requirements.txt`, `.gitignore`, `.env.example`, and `README_CHROMEBOOK.md`.
+3. Create these files in the repository root: `bot.py`, `requirements.txt`, `.gitignore`, `.env.example`, and `README_CHROMEBOOK.md`.
 4. Paste in the complete contents for each file and commit the changes to the repository.
 5. Do not put real credentials in `.env.example`, source files, or GitHub commits. The `.gitignore` excludes `.env` and SQLite database files, but hosting secrets should be entered in the host's settings instead.
 
@@ -25,33 +25,23 @@ This project can be created, configured, and deployed entirely in a browser. You
 1. Open [NVIDIA Build](https://build.nvidia.com/) and sign in or create an account.
 2. Create an API key using NVIDIA's current account/API-key page and copy it privately. API access, model availability, and usage limits may depend on NVIDIA's current terms and account eligibility.
 
-## C. Deploy from GitHub using a web host
+## C. Deploy on Bot-Hosting.net
 
-The steps below use a GitHub-connected Python worker such as Koyeb. Hosting dashboards and free-plan terms change over time. Check the current plan before deploying: do not assume a free instance is always available or remains awake 24/7. A bot needs a continuously running worker, and a sleeping or stopped service will appear offline.
+The bot is a standard Python application: Bot-Hosting.net's Python runtime reads `requirements.txt` when it starts, so no web server or extra hosting-specific source code is needed. The panel and plan limits can change; check the current resource allowance and free-subscription rules before relying on continuous uptime. See the provider's [Create a Deployment](https://bot-hosting.net/docs/guides/create-a-deployment), [Set Up a Deployment](https://bot-hosting.net/docs/guides/set-up-a-deployment), and [Clone a GitHub Repository](https://bot-hosting.net/docs/guides/clone-a-github-repository) guides for current screenshots and panel labels.
 
-1. Create an account with the host in your browser, then choose **Create Service** (or its equivalent) and connect your GitHub account.
-2. Select this repository and branch. Choose a Python runtime/buildpack if asked.
-3. Configure the service as a **Worker/Background Worker**, not as a web site that expects HTTP requests. Use this start command:
+1. Open [Bot-Hosting.net](https://bot-hosting.net/) in your browser, create an account, and open the default project.
+2. Click **New Deployment** and choose **Application**. Choose **GitHub** as the source, connect GitHub if prompted, and select the `pattaraponbunson-web/disbot2` repository and `main` branch. If the repository is private, connect a GitHub account that can access it.
+3. Select the **Python** runtime, choose the available resources, and launch the deployment.
+4. Open the deployment panel's **Startup** tab. Set **Entry File (STARTUP_FILE)** to `bot.py` and save. Keep the Python runtime's default startup behavior; it installs packages listed in `requirements.txt` when starting.
+5. Add `DISCORD_TOKEN` and `NVIDIA_API_KEY` using the panel's environment/startup variable controls if available. If the panel does not provide custom environment variables, create a `.env` file in the deployment's root **Files** area containing those two assignments. Add the values only in the host panel; never commit them to GitHub. The bot already loads both environment variables and `.env` through `python-dotenv`.
+6. Start the deployment and open **Console** to check for `Logged in as ...`. If startup fails, confirm the entry file is `bot.py`, `requirements.txt` is in the root, and both credentials are set. Then mention the bot in Discord or message it directly.
+7. When updating from GitHub, use the GitHub sync in the **Files** tab and choose **Merge** to update matching project files while retaining host-only files. **Replace all files** removes existing files, which can delete `.env` and `chat_history.db`.
 
-   ```text
-   python main.py
-   ```
-
-   The host should install dependencies from `requirements.txt` during deployment. If it asks for an install/build command, use `pip install -r requirements.txt`.
-4. In the service's **Environment Variables**, **Secrets**, or **Configuration** page, add:
-   - `DISCORD_TOKEN`: the token from the Discord Developer Portal
-   - `NVIDIA_API_KEY`: the key from NVIDIA Build
-   - Optionally, `NVIDIA_MODEL`: defaults to `meta/llama-3.3-70b-instruct`
-5. Select a plan that supports an always-on worker, review any charges or usage limits, and deploy. Check the service logs for `Logged in as ...` to confirm the bot connected. Then mention the bot in a server channel or send it a direct message.
-6. Keep `DISCORD_TOKEN` and `NVIDIA_API_KEY` only in the host's secret settings. If either is exposed, revoke it at its provider and create a replacement.
+Keep `DISCORD_TOKEN` and `NVIDIA_API_KEY` private. If either is exposed, revoke it with its provider and replace it in the hosting panel.
 
 ### SQLite storage note
 
-The bot creates `chat_history.db` beside `main.py` by default. Some hosts use temporary filesystems, so this database may be lost when a service is replaced or redeployed. If conversation history must survive deployments, attach a persistent disk/volume and set `CHAT_HISTORY_DB` to a writable file path on that mounted volume. Confirm that the selected host and plan support persistent storage; do not commit the database to GitHub.
-
-### Other bot hosting panels
-
-If you use a browser-based bot host such as Bot-Hosting.net instead, look for a Python service that can deploy from GitHub (or upload the repository files through its web panel), install `requirements.txt`, set the same environment variables, and run `python main.py`. Verify that its current plan permits a continuously running Discord bot and provides persistent storage if you need history retained. A host's advertised free tier, uptime, and storage can change; check its current terms before relying on it for 24/7 operation.
+The bot creates `chat_history.db` beside `bot.py` by default. The database lives in the deployment's files; keep backups if the chat history matters. Syncing with **Replace all files** or deleting the deployment can remove it. Do not commit the database to GitHub. If the host offers persistent storage, you can set `CHAT_HISTORY_DB` to a writable path on it.
 
 ## Commands and behavior
 

@@ -34,8 +34,9 @@ The bot is a standard Python application: Bot-Hosting.net's Python runtime reads
 3. Select the **Python** runtime, choose the available resources, and launch the deployment.
 4. Open the deployment panel's **Startup** tab. Set **Entry File (STARTUP_FILE)** to `bot.py` and save. Keep the Python runtime's default startup behavior; it installs packages listed in `requirements.txt` when starting.
 5. Add `DISCORD_TOKEN` and `NVIDIA_API_KEY` using the panel's environment/startup variable controls if available. If the panel does not provide custom environment variables, create a `.env` file in the deployment's root **Files** area containing those two assignments. Add the values only in the host panel; never commit them to GitHub. The bot already loads both environment variables and `.env` through `python-dotenv`. If you set `NVIDIA_MODEL` on the host, update it to `nvidia/nemotron-3.5-lightning-30b-a3b` or remove the override so the new default is used. The optional `NVIDIA_TIMEOUT_SECONDS` setting defaults to `120`.
-6. Start the deployment and open **Console** to check for `Logged in as ...`. If startup fails, confirm the entry file is `bot.py`, `requirements.txt` is in the root, and both credentials are set. Then mention the bot in Discord or message it directly.
-7. When updating from GitHub, use the GitHub sync in the **Files** tab and choose **Merge** to update matching project files while retaining host-only files. **Replace all files** removes existing files, which can delete `.env` and `chat_history.db`.
+6. To restrict the bot to one channel, copy that channel's ID into the `ALLOWED_CHANNEL_ID` environment variable. In Discord, enable **Developer Mode** under **User Settings > Advanced**, then right-click the target channel and choose **Copy Channel ID**. Leave the variable unset or empty to allow all channels. This restricts normal replies, `/ask`, and `!reset`; using `/ask` elsewhere only shows an ephemeral notice.
+7. Start the deployment and open **Console** to check for `Logged in as ...`. If startup fails, confirm the entry file is `bot.py`, `requirements.txt` is in the root, and both credentials are set. Then mention the bot in Discord or message it directly.
+8. When updating from GitHub, use the GitHub sync in the **Files** tab and choose **Merge** to update matching project files while retaining host-only files. **Replace all files** removes existing files, which can delete `.env` and `chat_history.db`.
 
 Keep `DISCORD_TOKEN` and `NVIDIA_API_KEY` private. If either is exposed, revoke it with its provider and replace it in the hosting panel.
 
@@ -46,6 +47,6 @@ The bot creates `chat_history.db` beside `bot.py` by default. The database lives
 ## Commands and behavior
 
 - Use `/ask` with a prompt to chat through a Discord slash command. After deploying an update, restart the bot so it can sync the command with Discord; global command changes may take a little while to appear.
-- Mention the bot in a server channel, or message it directly, to chat.
+- Mention the bot in a server channel, or message it directly, to chat. If `ALLOWED_CHANNEL_ID` is configured, it only responds in that channel.
 - Run `!reset` in a channel to clear that channel's saved history.
 - The bot stores the latest conversation messages in SQLite and sends long responses in Discord-safe chunks.

@@ -122,6 +122,14 @@ load_dotenv()
 DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
 NVIDIA_API_KEY = os.getenv("NVIDIA_API_KEY")
 MODEL = os.getenv("NVIDIA_MODEL", DEFAULT_MODEL)
+ALLOWED_CHANNEL_ID_VALUE = os.getenv("ALLOWED_CHANNEL_ID", "").strip()
+
+try:
+    ALLOWED_CHANNEL_ID = (
+        int(ALLOWED_CHANNEL_ID_VALUE) if ALLOWED_CHANNEL_ID_VALUE else None
+    )
+except ValueError as error:
+    raise RuntimeError("ALLOWED_CHANNEL_ID must be a numeric Discord channel ID.") from error
 
 if not DISCORD_TOKEN:
     raise RuntimeError("DISCORD_TOKEN is required. Set it in the host environment or .env.")
@@ -188,6 +196,15 @@ async def reset_command(ctx):
 @app_commands.describe(prompt="What would you like to ask?")
 async def ask_command(interaction: discord.Interaction, prompt: str):
     """Answer a question using the channel's saved conversation history."""
+    if (
+        ALLOWED_CHANNEL_ID is not None
+        and interaction.channel_id != ALLOWED_CHANNEL_ID
+    ):
+        await interaction.response.send_message(
+            "I only respond in the configured channel.", ephemeral=True
+        )
+        return
+
     await interaction.response.defer(thinking=True)
     try:
         response = await generate_response(interaction.channel_id, prompt)
@@ -205,6 +222,8 @@ async def ask_command(interaction: discord.Interaction, prompt: str):
 @bot.event
 async def on_message(message):
     if message.author.bot:
+        return
+    if ALLOWED_CHANNEL_ID is not None and message.channel.id != ALLOWED_CHANNEL_ID:
         return
 
     await bot.process_commands(message)

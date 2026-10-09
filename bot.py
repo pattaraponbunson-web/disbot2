@@ -6,6 +6,7 @@ from functools import partial
 from pathlib import Path
 
 import discord
+from discord import app_commands
 from discord.ext import commands
 from dotenv import load_dotenv
 from openai import OpenAI
@@ -129,11 +130,41 @@ intents = discord.Intents.default()
 intents.messages = True
 intents.message_content = True
 bot = commands.Bot(command_prefix="!", intents=intents, help_command=None)
+commands_synced = False
+
+
+async def generate_response(channel_id, prompt):
+    add_message_to_db(channel_id, "user", prompt)
+    history = get_history_from_db(channel_id, HISTORY_LIMIT)
+    api_messages = [{"role": "system", "content": SYSTEM_PROMPT}, *history]
+    request = partial(
+        client.chat.completions.create,
+        model=MODEL,
+        messages=api_messages,
+        temperature=0.7,
+        max_tokens=2048,
+    )
+
+    completion = await bot.loop.run_in_executor(None, request)
+    response = completion.choices[0].message.content
+    if not response or not response.strip():
+        response = "I couldn't produce a response just now. Please try again."
+    response = response.strip()
+    add_message_to_db(channel_id, "assistant", response)
+    return response
 
 
 @bot.event
 async def on_ready():
+    global commands_synced
     logger.info("Logged in as %s (ID: %s)", bot.user, bot.user.id)
+    if not commands_synced:
+        try:
+            synced = await bot.tree.sync()
+            commands_synced = True
+            logger.info("Synced %s application command(s)", len(synced))
+        except Exception:
+            logger.exception("Failed to sync application commands")
 
 
 @bot.command(name="reset")
@@ -141,6 +172,24 @@ async def reset_command(ctx):
     """Clear this channel's saved conversation history."""
     clear_history_from_db(ctx.channel.id)
     await ctx.send("Conversation history for this channel has been cleared.")
+
+
+@bot.tree.command(name="ask", description="Ask the AI assistant a question")
+@app_commands.describe(prompt="What would you like to ask?")
+async def ask_command(interaction: discord.Interaction, prompt: str):
+    """Answer a question using the channel's saved conversation history."""
+    await interaction.response.defer(thinking=True)
+    try:
+        response = await generate_response(interaction.channel_id, prompt)
+        for chunk in chunk_message(response):
+            await interaction.followup.send(chunk)
+    except Exception:
+        logger.exception(
+            "Failed to process /ask in channel %s", interaction.channel_id
+        )
+        await interaction.followup.send(
+            "Sorry, I couldn't process that message right now. Please try again later."
+        )
 
 
 @bot.event
@@ -169,25 +218,8 @@ async def on_message(message):
 
     channel_id = message.channel.id
     try:
-        add_message_to_db(channel_id, "user", prompt)
-        history = get_history_from_db(channel_id, HISTORY_LIMIT)
-        api_messages = [{"role": "system", "content": SYSTEM_PROMPT}, *history]
-        request = partial(
-            client.chat.completions.create,
-            model=MODEL,
-            messages=api_messages,
-            temperature=0.7,
-            max_tokens=2048,
-        )
-
         async with message.channel.typing():
-            completion = await bot.loop.run_in_executor(None, request)
-
-        response = completion.choices[0].message.content
-        if not response or not response.strip():
-            response = "I couldn't produce a response just now. Please try again."
-        response = response.strip()
-        add_message_to_db(channel_id, "assistant", response)
+            response = await generate_response(channel_id, prompt)
         for chunk in chunk_message(response):
             await message.channel.send(chunk)
     except Exception:
